@@ -452,7 +452,7 @@ st.markdown("---")
 
 if st.button("🔍 See My Profile", type="primary"):
   recalled = saw_warnings[saw_warnings['warn_recall_thcmh']==1.0]
-    notrecalled = saw_warnings[saw_warnings['warn_recall_thcmh']==0.0]
+  notrecalled = saw_warnings[saw_warnings['warn_recall_thcmh']==0.0]
 
     # Determine daily use
     is_daily = use_frequency == 7
