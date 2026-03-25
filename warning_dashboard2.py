@@ -484,13 +484,13 @@ if st.button("🔍 See My Profile", type="primary"):
     st.markdown("---")
 
     # Warning label paradox
-    if recalled and is_daily:
+    # Warning label paradox
+    if recalled_warning and is_daily:
         st.error(
             "⚠️ **Warning Label Paradox Detected**\n\n"
             "You recalled the THC mental health warning and use cannabis daily. "
-            f"In our national sample, {recalled['daily_dv'].mean()*100:.1f}% of "
-            "people who recalled this warning use daily — compared to "
-            f"{notrecalled['daily_dv'].mean()*100:.1f}% who did not recall it. "
+            "In our national sample, **29.1%** of people who recalled this warning "
+            "use daily — compared to **21.9%** who did not recall it. "
             "The warning is reaching you. This pattern suggests the label alone "
             "may not be sufficient to support behavior change."
         )
