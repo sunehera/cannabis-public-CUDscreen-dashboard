@@ -205,7 +205,7 @@ st.metric("Reduced ANY medication since starting cannabis",
           help="526 of 1,170 medical/dual purpose users")
 
 # ── SECTION 4: Demographics ───────────────────────────────────
-st.header("👥 Demograihics")
+st.header("👥 Demographics")
 
 col1, col2 = st.columns(2)
 
