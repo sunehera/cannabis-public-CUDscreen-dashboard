@@ -154,7 +154,7 @@ st.markdown("Among medical and dual-purpose users — which prescription medicat
 
 
 
-# Always use full medical/dual users - not filtered
+#use full medical/dual users - not filtered
 med_users_full = cannabis_users[cannabis_users['canpurpose_dv'].isin([2,3])].copy()
 
 med_vars = {
