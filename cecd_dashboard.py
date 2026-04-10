@@ -146,15 +146,33 @@ with col1:
     """)
 with col2:
     # CECD score distribution
-    score_dist = filtered['cecd_score'].value_counts().sort_index().reset_index()
-    score_dist.columns = ['CECD Score', 'Count']
-    fig_dist = px.bar(score_dist, x='CECD Score', y='Count',
-                      title='CECD Score Distribution',
-                      color='CECD Score',
-                      color_continuous_scale='Greens')
-    fig_dist.update_layout(plot_bgcolor='white', coloraxis_showscale=False,
-                           xaxis_title='Number of CECD-linked Symptoms')
-    st.plotly_chart(fig_dist, use_container_width=True)
+    score_dist = (
+        filtered['cecd_score']
+        .value_counts()
+        .sort_index()
+        .rename_axis('CECD Score')   # ✅ ensures correct label
+        .reset_index(name='Count')   # ✅ explicitly names counts
+    )
+
+    if score_dist.empty:
+        st.warning("No data available for CECD score distribution.")
+    else:
+        fig_dist = px.bar(
+            score_dist,
+            x='CECD Score',
+            y='Count',
+            title='CECD Score Distribution',
+            color='CECD Score',
+            color_continuous_scale='Greens'
+        )
+
+        fig_dist.update_layout(
+            plot_bgcolor='white',
+            coloraxis_showscale=False,
+            xaxis_title='Number of CECD-linked Symptoms'
+        )
+
+        st.plotly_chart(fig_dist, use_container_width=True)
 
 st.markdown("---")
 
