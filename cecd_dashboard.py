@@ -28,7 +28,7 @@ st.markdown("---")
 # COPY YOUR EXACT load_data() FUNCTION FROM warning_dashboard2.py HERE
 @st.cache_data
 def load_data():
-    df = pd.read_csv("cannabis_dashboard_data.csv")
+    df = pd.read_csv("cannabis_dashboard_data2.csv")
     missing = [-7, -8, -9]
     df = df.replace(missing, np.nan)
     df['work_use_binary'] = df['work_use'].apply(
