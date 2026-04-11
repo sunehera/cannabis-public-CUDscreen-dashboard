@@ -309,6 +309,7 @@ Answer the questions below to see your estimated CECD symptom burden and what th
 population data suggests about users like you.
 """)
 
+# Step 1 — Symptoms
 st.subheader("Step 1: Your Symptoms")
 st.markdown("Select any conditions you experience regularly:")
 
@@ -328,61 +329,167 @@ with col3:
     has_spasms = st.checkbox("⚡ Muscle spasms")
     has_none = st.checkbox("✅ None of the above")
 
-st.subheader("Step 2: Your Cannabis Use")
-user_purpose = st.selectbox(
-    "Why do you use cannabis?",
-    options=[1, 2, 3],
-    format_func=lambda x: {
-        1: "Recreation only",
-        2: "Both medical and recreational",
-        3: "Medical only"
-    }[x]
-)
+# Step 2 — Usage Patterns
+st.subheader("Step 2: Your Cannabis Use & Patterns")
 
-user_mode = st.multiselect(
-    "How do you consume cannabis?",
-    options=["Smoking (flower)", "Vaping", "Oils/Tinctures",
-             "Edibles", "Topicals", "Concentrates/Dabs"]
-)
+col1, col2 = st.columns(2)
+with col1:
+    user_purpose = st.selectbox(
+        "Why do you use cannabis?",
+        options=[1, 2, 3],
+        format_func=lambda x: {
+            1: "Recreation only",
+            2: "Both medical and recreational",
+            3: "Medical only"
+        }[x]
+    )
 
-user_help_need = st.selectbox(
-    "Have you ever felt you needed help related to your cannabis use?",
-    options=[1, 2, 3],
-    format_func=lambda x: {
-        1: "No, never",
-        2: "Yes, in the past 12 months",
-        3: "Yes, but not recently"
-    }[x]
-)
+    user_frequency = st.selectbox(
+        "How often do you use cannabis?",
+        options=[1, 2, 3, 4, 5],
+        format_func=lambda x: {
+            1: "Daily",
+            2: "A few times a week",
+            3: "Weekly",
+            4: "Monthly",
+            5: "Rarely"
+        }[x]
+    )
 
-user_help_receive = st.selectbox(
-    "Have you received professional support for your cannabis use?",
-    options=[1, 2],
-    format_func=lambda x: {
-        1: "No",
-        2: "Yes"
-    }[x]
-)
+    user_duration = st.selectbox(
+        "How long have you been using cannabis?",
+        options=[1, 2, 3, 4],
+        format_func=lambda x: {
+            1: "Less than 1 year",
+            2: "1-3 years",
+            3: "3-5 years",
+            4: "5+ years"
+        }[x]
+    )
+
+with col2:
+    user_mode = st.multiselect(
+        "How do you consume cannabis?",
+        options=["Smoking (flower)", "Vaping", "Oils/Tinctures",
+                 "Edibles", "Topicals", "Concentrates/Dabs"]
+    )
+
+    user_time_of_day = st.multiselect(
+        "When do you typically use cannabis?",
+        options=["Morning", "Afternoon", "Evening", "Night", "Multiple times a day"]
+    )
+
+    user_dose_change = st.selectbox(
+        "Have you increased your dose over time?",
+        options=[1, 2, 3],
+        format_func=lambda x: {
+            1: "Yes, increased",
+            2: "No, stayed the same",
+            3: "Decreased"
+        }[x]
+    )
+
+# Step 3 — Motivations & Outcomes
+st.subheader("Step 3: Motivations & Outcomes")
+
+col1, col2 = st.columns(2)
+with col1:
+    user_top_symptom = st.selectbox(
+        "Which symptom does cannabis help most?",
+        options=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+        format_func=lambda x: {
+            1: "Anxiety",
+            2: "Depression",
+            3: "Sleep",
+            4: "Chronic pain",
+            5: "PTSD",
+            6: "Migraines",
+            7: "Nausea / GI",
+            8: "Inflammation / arthritis",
+            9: "Muscle spasms",
+            10: "Recreational / enjoyment",
+            11: "Other"
+        }[x]
+    )
+
+    user_effectiveness = st.selectbox(
+        "Does cannabis actually help with this symptom?",
+        options=[1, 2, 3, 4],
+        format_func=lambda x: {
+            1: "Yes, always",
+            2: "Sometimes",
+            3: "Rarely",
+            4: "No"
+        }[x]
+    )
+
+with col2:
+    user_tried_pharma = st.selectbox(
+        "Have you tried pharmaceutical alternatives for your symptoms?",
+        options=[1, 2],
+        format_func=lambda x: {
+            1: "Yes",
+            2: "No"
+        }[x]
+    )
+
+    user_substituted = None
+    if user_tried_pharma == 1:
+        user_substituted = st.selectbox(
+            "Did you substitute cannabis for a medication?",
+            options=[1, 2, 3],
+            format_func=lambda x: {
+                1: "Yes, completely replaced it",
+                2: "Yes, reduced my dose",
+                3: "No, I use both"
+            }[x]
+        )
+
+    user_help_need = st.selectbox(
+        "Have you ever felt you needed help related to your cannabis use?",
+        options=[1, 2, 3],
+        format_func=lambda x: {
+            1: "No, never",
+            2: "Yes, in the past 12 months",
+            3: "Yes, but not recently"
+        }[x]
+    )
+
+    user_help_receive = st.selectbox(
+        "Have you received professional support for your cannabis use?",
+        options=[1, 2],
+        format_func=lambda x: {
+            1: "No",
+            2: "Yes"
+        }[x]
+    )
 
 if st.button("🔍 Calculate My ECS Profile", type="primary"):
-    # Calculate user CECD score
     symptoms = [has_anxiety, has_depression, has_sleep, has_pain,
                 has_ptsd, has_migraine, has_nausea, has_ibs,
                 has_arthritis, has_spasms]
     user_cecd_score = sum(symptoms) if not has_none else 0
     user_tier = cecd_tier(user_cecd_score)
     user_in_gap = user_help_need in [2, 3] and user_help_receive == 1
+    is_daily = user_frequency == 1
+    is_long_term = user_duration == 4
+    dose_escalating = user_dose_change == 1
+    substituted = user_substituted in [1, 2] if user_substituted else False
+    morning_use = "Morning" in user_time_of_day
+    multi_daily = "Multiple times a day" in user_time_of_day
 
     st.markdown("---")
     st.subheader("📊 Your ECS Profile")
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     col1.metric("Your CECD Score", f"{user_cecd_score} / {len(symptoms)}")
     col2.metric("CECD Tier", user_tier)
     col3.metric("Care Gap Status",
                 "⚠️ In Care Gap" if user_in_gap else "✅ Not in Care Gap")
+    col4.metric("Use Pattern",
+                "🔴 High intensity" if (is_daily or multi_daily) else "🟡 Moderate" if user_frequency <= 3 else "🟢 Low")
 
-    # Find similar users in dataset
+    # Find similar users
     similar = filtered.copy()
     if user_cecd_score >= 3:
         similar = similar[similar['cecd_score'] >= 3]
@@ -391,6 +498,7 @@ if st.button("🔍 Calculate My ECS Profile", type="primary"):
 
     st.markdown(f"**{len(similar):,} people in the national dataset share a similar CECD profile.**")
 
+    # CECD result
     if user_cecd_score >= 3:
         st.warning(f"""
         🌱 **High CECD Symptom Burden Detected**
@@ -405,7 +513,6 @@ if st.button("🔍 Calculate My ECS Profile", type="primary"):
         Whole-plant formulations leveraging the Entourage Effect (flower, full-spectrum oils) 
         may be more effective than isolated compounds for your symptom profile.
         """)
-
     elif user_cecd_score > 0:
         st.info(f"""
         🌿 **Moderate CECD Symptom Burden**
@@ -422,11 +529,53 @@ if st.button("🔍 Calculate My ECS Profile", type="primary"):
 
         You reported few or no CECD-linked symptoms. Your cannabis use appears to be 
         primarily recreational rather than driven by an underlying biological deficiency.
-
-        This is valuable data — recreational users form the baseline against which 
-        therapeutic patterns can be understood.
         """)
 
+    # Dose escalation flag
+    if dose_escalating and user_cecd_score >= 2:
+        st.warning("""
+        📈 **Dose Escalation Pattern**
+
+        You've increased your dose over time alongside multiple CECD-linked symptoms. 
+        This pattern may indicate your body is seeking greater ECS support — 
+        or developing tolerance. A cannabis-informed clinician can help you find the 
+        right dose and formulation for your needs.
+        """)
+
+    # Morning / early use flag
+    if morning_use or multi_daily:
+        st.warning(f"""
+        🌅 **Early & Frequent Use Pattern**
+
+        You use cannabis in the morning or multiple times daily. In the national data, 
+        **{filtered['daily_dv'].mean()*100:.1f}%** of cannabis users report daily use. 
+        Frequent early use can be a sign of physical dependence or high symptom burden — 
+        both worth discussing with a healthcare provider.
+        """)
+
+    # Pharmaceutical substitution
+    if substituted:
+        st.info("""
+        💊 **Pharmaceutical Substitution Detected**
+
+        You've reduced or replaced a medication with cannabis. You're not alone — 
+        45% of medical cannabis users in the national data have reduced at least one 
+        prescription medication. However, unsupervised substitution carries risks. 
+        Please discuss any medication changes with your prescribing physician.
+        """)
+
+    # Effectiveness check
+    if user_effectiveness in [3, 4] and user_cecd_score >= 2:
+        st.info("""
+        🔄 **Low Effectiveness + High Symptom Burden**
+
+        Cannabis doesn't seem to be fully addressing your symptoms despite significant 
+        CECD-linked conditions. This may suggest your current formulation, dose, or 
+        consumption method isn't optimized for your biology. A cannabis specialist 
+        could help identify a more effective approach.
+        """)
+
+    # Care gap
     if user_in_gap:
         st.error("""
         ⚠️ **You Are in the Care Gap**
@@ -437,22 +586,30 @@ if st.button("🔍 Calculate My ECS Profile", type="primary"):
         Resources to explore:
         - Talk to a cannabis-informed physician
         - The Network of Applied Pharmacognosy (NAP): appliedpharmacognosy.org
+        - Association of Cannabinoid Specialists: cannabinoidspecialists.com
         - Cannabis Consumers Coalition
         """)
 
-    # Entourage effect recommendation
+    # Entourage effect
     entourage_modes = ["Smoking (flower)", "Vaping", "Oils/Tinctures"]
     user_uses_entourage = any(m in entourage_modes for m in user_mode)
-
     if user_cecd_score >= 3 and not user_uses_entourage:
         st.info("""
         💡 **Entourage Effect Consideration**
 
-        Users with your symptom profile in the national data tend to benefit from 
-        whole-plant consumption methods. If you primarily use edibles or isolates, 
-        you may not be experiencing the full synergistic effect of cannabinoids and terpenes.
+        Users with your symptom profile tend to benefit from whole-plant consumption methods. 
+        If you primarily use edibles or isolates, you may not be experiencing the full 
+        synergistic effect of cannabinoids and terpenes working together.
 
         Consider discussing full-spectrum formulations with a healthcare provider.
+        """)
+
+    # Long term use context
+    if is_long_term and dose_escalating:
+        st.caption("""
+        📅 You've been using cannabis for 5+ years with increasing doses. 
+        Long-term patterns are valuable data — consider tracking your symptoms 
+        and use patterns over time to share with a clinician.
         """)
 
 st.markdown("---")
