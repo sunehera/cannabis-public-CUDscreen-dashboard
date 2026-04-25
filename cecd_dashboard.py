@@ -713,7 +713,7 @@ if st.button("🔍 Calculate My ECS Profile", type="primary"):
 
             Resources:
             - Talk to a cannabis-informed physician
-            - Network of Applied Pharmacognosy (NAP): appliedpharmacognosy.org
+            - ECS Wellness: ecswellness.com
             - Association of Cannabinoid Specialists: cannabinoidspecialists.com
             """)
 
