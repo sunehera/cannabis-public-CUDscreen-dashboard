@@ -9,9 +9,73 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
+from datetime import datetime
+import uuid
 
-
-
+def get_supabase_client():
+    try:
+        from supabase import create_client
+        url = st.secrets["supabase"]["url"]
+        key = st.secrets["supabase"]["key"]
+        return create_client(url, key)
+    except Exception:
+        return None
+ 
+def user_login_cud():
+    if 'user_id' in st.session_state and st.session_state.user_id:
+        return st.session_state.user_id
+    st.markdown('---')
+    st.subheader('👤 Track Your CHS Symptoms Over Time')
+    st.markdown('Enter your name or email to save your results and track patterns across sessions.')
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        identifier = st.text_input(
+            "Your name or email",
+            placeholder="e.g. jane@email.com or Jane",
+            key="cud_login_input"
+        )
+    with col2:
+        st.markdown("<br>", unsafe_allow_html=True)
+        login_btn = st.button("Continue →", type="primary", key="cud_login_btn")
+    st.caption("🔒 Used only to link your screening history. No passwords required.")
+    if login_btn and identifier.strip():
+        st.session_state.user_id = identifier.strip().lower()
+        st.rerun()
+    elif login_btn:
+        st.error("Please enter a name or email.")
+    st.stop()
+    return None
+ 
+def save_chs_to_supabase(client, user_id, entry):
+    try:
+        client.table('chs_screening').insert({
+            'user_id': user_id,
+            'chs_risk': entry['chs_risk'],
+            'chs_score': entry['chs_score'],
+            'frequency_score': entry['frequency_score'],
+            'nausea_score': entry['nausea_score'],
+            'shower_relief': entry['shower_relief'],
+            'duration_years': entry['duration_years'],
+        }).execute()
+        return True
+    except Exception:
+        return False
+ 
+def load_chs_from_supabase(client, user_id):
+    try:
+        response = client.table('chs_screening')\
+            .select('*')\
+            .eq('user_id', user_id)\
+            .order('date')\
+            .execute()
+        if response.data:
+            df = pd.DataFrame(response.data)
+            df['date'] = pd.to_datetime(df['date']).dt.strftime("%Y-%m-%d %H:%M")
+            return df.to_dict('records')
+        return []
+    except Exception:
+        return []
+ 
 
 # ── Page config ──────────────────────────────────────────────
 st.set_page_config(page_title="Cannabis Public Health Dashboard",
@@ -73,6 +137,23 @@ st.sidebar.markdown("---")
 st.sidebar.metric("Filtered sample", f"{len(filtered):,}")
 st.sidebar.metric("Recalled warning", 
     f"{int((filtered['warn_recall_thcmh']==1).sum()):,}")
+
+supabase = get_supabase_client()
+user_id = user_login_cud()
+ 
+if 'chs_history' not in st.session_state or len(st.session_state.chs_history) == 0:
+    if supabase and user_id:
+        st.session_state.chs_history = load_chs_from_supabase(supabase, user_id)
+    else:
+        st.session_state.chs_history = []
+ 
+st.sidebar.markdown("---")
+if user_id:
+    st.sidebar.markdown(f"**Logged in as:** `{user_id}`")
+    if st.sidebar.button("🔄 Switch User"):
+        del st.session_state["user_id"]
+        st.session_state.chs_history = []
+        st.rerun()
 
 # ── SECTION 1: Warning Label Paradox ─────────────────────────
 st.header("⚠️ The Warning Label Paradox")
@@ -526,6 +607,364 @@ if st.button("🔍 See My Profile", type="primary"):
             "of users with a similar profile report beneficial mental health outcomes."
         )
 
+  st.markdown("---")
+st.header("🌡️ CHS Digital Phenotype — Cannabinoid Hyperemesis Syndrome Screener")
+st.markdown("""
+**Cannabinoid Hyperemesis Syndrome (CHS)** is a condition of cyclic nausea, vomiting, 
+and abdominal pain in long-term, heavy cannabis users — relieved by hot showers or baths.
+ 
+It is frequently misdiagnosed as cyclic vomiting syndrome or functional GI disorder.
+This screener helps identify behavioral and symptom patterns consistent with CHS.
+ 
+*Educational only. Not a clinical diagnosis. If you experience severe cyclic vomiting, seek medical care.*
+""")
+ 
+st.info("""
+**Why this matters:** CHS is underdiagnosed and often missed because neither patients 
+nor clinicians connect symptoms to cannabis use. Early pattern recognition saves 
+unnecessary hospitalizations and suffering.
+""")
+ 
+st.subheader("Step 1 — Cannabis Use Patterns")
+ 
+col1, col2 = st.columns(2)
+with col1:
+    chs_frequency = st.selectbox(
+        "How often do you currently use cannabis?",
+        options=[None, 1, 2, 3, 4, 5],
+        format_func=lambda x: "Select an option" if x is None else {
+            1: "Daily or almost daily",
+            2: "4-6 times a week",
+            3: "2-3 times a week",
+            4: "Once a week or less",
+            5: "Rarely"
+        }[x],
+        key="chs_freq"
+    )
+ 
+    chs_duration = st.selectbox(
+        "How long have you been using cannabis regularly?",
+        options=[None, 1, 2, 3, 4],
+        format_func=lambda x: "Select an option" if x is None else {
+            1: "Less than 1 year",
+            2: "1-3 years",
+            3: "3-5 years",
+            4: "5+ years"
+        }[x],
+        key="chs_dur"
+    )
+ 
+    chs_amount = st.selectbox(
+        "How much cannabis do you typically use per session?",
+        options=[None, 1, 2, 3],
+        format_func=lambda x: "Select an option" if x is None else {
+            1: "Large amount (heavy use)",
+            2: "Moderate amount",
+            3: "Small amount"
+        }[x],
+        key="chs_amount"
+    )
+ 
+with col2:
+    chs_method = st.multiselect(
+        "How do you consume cannabis?",
+        options=["Smoking (flower)", "Vaping", "Concentrates/Dabs",
+                 "Edibles", "Oils/Tinctures", "Other"],
+        key="chs_method"
+    )
+ 
+    chs_tolerance = st.selectbox(
+        "Has your tolerance increased significantly over time?",
+        options=[None, 1, 2],
+        format_func=lambda x: "Select an option" if x is None else {
+            1: "Yes, I need much more to feel effects",
+            2: "No, tolerance has stayed similar"
+        }[x],
+        key="chs_tol"
+    )
+ 
+st.subheader("Step 2 — Symptom Patterns")
+ 
+col1, col2 = st.columns(2)
+with col1:
+    chs_nausea = st.selectbox(
+        "Do you experience episodes of nausea or vomiting?",
+        options=[None, 1, 2, 3, 4],
+        format_func=lambda x: "Select an option" if x is None else {
+            1: "Yes, severe cyclic episodes (recurring pattern)",
+            2: "Yes, occasional nausea",
+            3: "Mild nausea sometimes",
+            4: "No nausea or vomiting"
+        }[x],
+        key="chs_nausea"
+    )
+ 
+    chs_abdominal = st.selectbox(
+        "Do you experience abdominal pain or cramping?",
+        options=[None, 1, 2, 3],
+        format_func=lambda x: "Select an option" if x is None else {
+            1: "Yes, severe and recurring",
+            2: "Yes, occasional",
+            3: "No"
+        }[x],
+        key="chs_abdom"
+    )
+ 
+    chs_timing = st.selectbox(
+        "When do symptoms typically occur?",
+        options=[None, 1, 2, 3, 4],
+        format_func=lambda x: "Select an option" if x is None else {
+            1: "Early morning / upon waking",
+            2: "Throughout the day",
+            3: "After using cannabis",
+            4: "No pattern / no symptoms"
+        }[x],
+        key="chs_timing"
+    )
+ 
+with col2:
+    chs_shower = st.selectbox(
+        "Does a hot shower or bath relieve your nausea or abdominal pain?",
+        options=[None, 1, 2, 3],
+        format_func=lambda x: "Select an option" if x is None else {
+            1: "Yes, significantly — I compulsively take hot showers for relief",
+            2: "Yes, somewhat",
+            3: "No / I haven't tried"
+        }[x],
+        key="chs_shower"
+    )
+ 
+    chs_hospital = st.selectbox(
+        "Have you visited an ER or been hospitalized for nausea/vomiting?",
+        options=[None, 1, 2, 3],
+        format_func=lambda x: "Select an option" if x is None else {
+            1: "Yes, multiple times",
+            2: "Yes, once",
+            3: "No"
+        }[x],
+        key="chs_hosp"
+    )
+ 
+    chs_cessation = st.selectbox(
+        "Have your symptoms improved during periods when you stopped using cannabis?",
+        options=[None, 1, 2, 3],
+        format_func=lambda x: "Select an option" if x is None else {
+            1: "Yes, symptoms resolved when I stopped",
+            2: "Yes, symptoms improved somewhat",
+            3: "No difference / haven't stopped",
+        }[x],
+        key="chs_cess"
+    )
+ 
+st.subheader("Step 3 — Diagnostic History")
+ 
+col1, col2 = st.columns(2)
+with col1:
+    chs_diagnosis = st.multiselect(
+        "Have you ever been diagnosed with any of these?",
+        options=[
+            "Cyclic Vomiting Syndrome (CVS)",
+            "Functional GI Disorder",
+            "IBS",
+            "Gastroparesis",
+            "None of the above"
+        ],
+        key="chs_diag"
+    )
+ 
+with col2:
+    chs_told_doctor = st.selectbox(
+        "Have you told your doctor about your cannabis use when reporting these symptoms?",
+        options=[None, 1, 2, 3],
+        format_func=lambda x: "Select an option" if x is None else {
+            1: "No — I haven't mentioned it",
+            2: "Yes, but they didn't connect it",
+            3: "Yes, and CHS was discussed"
+        }[x],
+        key="chs_doctor"
+    )
+ 
+if st.button("🔍 Calculate My CHS Risk Profile", type="primary", key="chs_calc"):
+ 
+    required_chs = [chs_frequency, chs_duration, chs_amount,
+                    chs_tolerance, chs_nausea, chs_abdominal,
+                    chs_shower, chs_hospital, chs_cessation, chs_told_doctor]
+ 
+    if any(v is None for v in required_chs):
+        st.error("⚠️ Please answer all questions before calculating your CHS profile.")
+    else:
+        # CHS Risk Scoring
+        chs_score = 0
+ 
+        # Frequency scoring
+        freq_score = {1: 3, 2: 2, 3: 1, 4: 0, 5: 0}.get(chs_frequency, 0)
+        chs_score += freq_score
+ 
+        # Duration scoring
+        dur_score = {1: 0, 2: 1, 3: 2, 4: 3}.get(chs_duration, 0)
+        chs_score += dur_score
+ 
+        # Nausea scoring — the strongest signal
+        nausea_score = {1: 4, 2: 2, 3: 1, 4: 0}.get(chs_nausea, 0)
+        chs_score += nausea_score
+ 
+        # Hot shower relief — the pathognomonic CHS sign
+        shower_score = {1: 4, 2: 2, 3: 0}.get(chs_shower, 0)
+        chs_score += shower_score
+ 
+        # Cessation relief
+        cess_score = {1: 3, 2: 1, 3: 0}.get(chs_cessation, 0)
+        chs_score += cess_score
+ 
+        # Hospitalization
+        hosp_score = {1: 2, 2: 1, 3: 0}.get(chs_hospital, 0)
+        chs_score += hosp_score
+ 
+        # Abdominal pain
+        abdom_score = {1: 2, 2: 1, 3: 0}.get(chs_abdominal, 0)
+        chs_score += abdom_score
+ 
+        # Tolerance
+        tol_score = {1: 1, 2: 0}.get(chs_tolerance, 0)
+        chs_score += tol_score
+ 
+        # Risk tier
+        if chs_score >= 14:
+            chs_risk = "High CHS Risk"
+            chs_color = "error"
+        elif chs_score >= 8:
+            chs_risk = "Moderate CHS Risk"
+            chs_color = "warning"
+        else:
+            chs_risk = "Low CHS Risk"
+            chs_color = "success"
+ 
+        st.markdown("---")
+        st.subheader("🌡️ Your CHS Risk Profile")
+ 
+        col1, col2, col3 = st.columns(3)
+        col1.metric("CHS Risk Score", f"{chs_score} / 22")
+        col2.metric("Risk Tier", chs_risk)
+        col3.metric("Hot Shower Relief", 
+                    "⚠️ Key signal" if chs_shower == 1 else 
+                    "Possible signal" if chs_shower == 2 else "Not present")
+ 
+        # Save to tracking
+        new_chs_entry = {
+            'date': datetime.now().strftime("%Y-%m-%d %H:%M"),
+            'chs_risk': chs_risk,
+            'chs_score': chs_score,
+            'frequency_score': freq_score,
+            'nausea_score': nausea_score,
+            'shower_relief': chs_shower,
+            'duration_years': chs_duration,
+        }
+        st.session_state.chs_history.append(new_chs_entry)
+ 
+        if supabase:
+            save_chs_to_supabase(supabase, user_id, new_chs_entry)
+            st.success("✅ Your CHS profile has been saved to your tracker!")
+ 
+        # Results
+        if chs_risk == "High CHS Risk":
+            st.error(f"""
+            🚨 **High CHS Risk — Score: {chs_score}/22**
+ 
+            Your symptom pattern is strongly consistent with Cannabinoid Hyperemesis Syndrome.
+ 
+            **Key signals detected:**
+            {"- ✅ Cyclic nausea/vomiting pattern" if chs_nausea == 1 else ""}
+            {"- ✅ Hot shower relief — the defining CHS marker" if chs_shower == 1 else ""}
+            {"- ✅ Symptom improvement with cannabis cessation" if chs_cessation == 1 else ""}
+            {"- ✅ Long-term heavy daily use" if chs_frequency == 1 and chs_duration == 4 else ""}
+ 
+            **What to do:**
+            Please speak with a healthcare provider and mention your cannabis use history.
+            CHS is treatable — the primary treatment is cannabis cessation.
+            If you are experiencing severe vomiting, please seek emergency care.
+            """)
+ 
+        elif chs_risk == "Moderate CHS Risk":
+            st.warning(f"""
+            ⚠️ **Moderate CHS Risk — Score: {chs_score}/22**
+ 
+            Some patterns in your responses are consistent with CHS.
+            Monitor your symptoms and consider discussing with a healthcare provider,
+            particularly if symptoms are recurring or worsening.
+            """)
+ 
+        else:
+            st.success(f"""
+            ✅ **Low CHS Risk — Score: {chs_score}/22**
+ 
+            Your current pattern does not strongly suggest CHS.
+            Continue monitoring if you develop new nausea or vomiting patterns.
+            """)
+ 
+        # Doctor communication
+        if chs_told_doctor == 1 and chs_risk in ["High CHS Risk", "Moderate CHS Risk"]:
+            st.warning("""
+            💬 **Important:** You haven't told your doctor about your cannabis use.
+            CHS is frequently misdiagnosed as cyclic vomiting syndrome or IBS when
+            cannabis use isn't disclosed. Your doctor needs this information to help you.
+            """)
+ 
+        # Misdiagnosis flag
+        misdiagnosed = [d for d in chs_diagnosis if d != "None of the above"]
+        if misdiagnosed and chs_risk in ["High CHS Risk", "Moderate CHS Risk"]:
+            st.info(f"""
+            🔍 **Possible Misdiagnosis Flag**
+            You've been diagnosed with: {', '.join(misdiagnosed)}.
+            These conditions share symptoms with CHS and CHS is frequently
+            misdiagnosed as one of these. Please discuss CHS specifically with your provider.
+            """)
+ 
+# ── CHS Progress Tracker ─────────────────────────────────────
+if st.session_state.get('chs_history'):
+    st.markdown("---")
+    st.subheader("📈 Your CHS Risk Over Time")
+ 
+    chs_hist_df = pd.DataFrame(st.session_state.chs_history)
+ 
+    col1, col2 = st.columns(2)
+    with col1:
+        fig_chs = px.line(
+            chs_hist_df, x='date', y='chs_score',
+            title='Your CHS Risk Score Over Time',
+            markers=True,
+            color_discrete_sequence=['#e63946']
+        )
+        fig_chs.update_layout(
+            plot_bgcolor='white',
+            yaxis_range=[0, 22],
+            yaxis_title='CHS Risk Score',
+            xaxis_title='Date'
+        )
+        st.plotly_chart(fig_chs, use_container_width=True)
+ 
+    with col2:
+        st.markdown("**Your CHS Screening History**")
+        st.dataframe(
+            chs_hist_df[['date', 'chs_score', 'chs_risk']],
+            use_container_width=True
+        )
+ 
+    if len(chs_hist_df) > 1:
+        first = chs_hist_df.iloc[0]['chs_score']
+        last = chs_hist_df.iloc[-1]['chs_score']
+        if last < first:
+            st.success(f"📉 Your CHS risk score decreased from {first} to {last}.")
+        elif last > first:
+            st.warning(f"📈 Your CHS risk score increased from {first} to {last}. Consider speaking with a provider.")
+ 
+    if st.button("🗑️ Clear CHS History", key="clear_chs"):
+        st.session_state.chs_history = []
+        st.rerun()
+ 
+st.caption("""
+⚠️ This CHS screener is for educational purposes only and does not constitute medical advice.
+CHS diagnosis requires clinical assessment. If you are experiencing severe symptoms, seek medical care immediately.
+""")
     st.markdown("---")
     
     st.caption(
