@@ -967,14 +967,14 @@ CHS diagnosis requires clinical assessment. If you are experiencing severe sympt
 """)
 st.markdown("---")
     
- st.caption(
+st.caption(
         "⚠️ This tool is for educational and research purposes only. "
         "It is not a clinical diagnostic tool. Results are based on population-level "
         "patterns from the 2024 Canadian Cannabis Survey and do not constitute "
         "medical advice. If you are concerned about your cannabis use, "
         "please speak with a healthcare professional."
     )
-    st.caption(
+st.caption(
         "📄 Based on: Hasib, S. (2026). Chasing the High. OSF Preprints. "
         "https://doi.org/10.31235/osf.io/znrhe_v1"
     )
