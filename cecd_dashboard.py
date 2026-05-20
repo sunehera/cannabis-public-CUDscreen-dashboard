@@ -772,6 +772,117 @@ if st.session_state.tracking_history:
         st.session_state.tracking_history = []
         st.rerun()
 
+# ── LIVE DATA INSIGHTS PANEL ─────────────────────────────────
+
+st.markdown("---")
+st.header("📡 Live Community Insights")
+st.markdown("*Real aggregate data from people who have completed this screening — updated in real time.*")
+
+def load_aggregate_insights(client):
+    """Load anonymized aggregate stats from Supabase."""
+    try:
+        response = client.table('screening_results').select('*').execute()
+        if response.data and len(response.data) > 0:
+            df = pd.DataFrame(response.data)
+            return df
+        return None
+    except Exception:
+        return None
+
+if supabase:
+    agg_df = load_aggregate_insights(supabase)
+    
+    if agg_df is not None and len(agg_df) >= 5:  # Only show if enough data
+        
+        total_screenings = len(agg_df)
+        care_gap_pct = agg_df['in_care_gap'].mean() * 100
+        avg_score = agg_df['cecd_score'].mean()
+        high_burden_pct = (agg_df['cecd_score'] >= 3).mean() * 100
+        
+        # Frequency breakdown
+        freq_map = {1: "Daily", 2: "Few times/week", 3: "Weekly", 4: "Monthly", 5: "Rarely"}
+        most_common_freq = None
+        if 'frequency' in agg_df.columns:
+            freq_counts = agg_df['frequency'].value_counts()
+            if not freq_counts.empty:
+                most_common_freq = freq_map.get(freq_counts.index[0], "Unknown")
+
+        st.markdown(f"""
+        > *Based on {total_screenings:,} anonymous screenings completed through this tool.*  
+        > *No personal data is displayed. All figures are aggregated and anonymized.*
+        """)
+
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric(
+            "🧑‍🤝‍🧑 Total Screenings",
+            f"{total_screenings:,}",
+            help="Number of people who have completed this screening"
+        )
+        col2.metric(
+            "⚠️ In the Care Gap",
+            f"{care_gap_pct:.1f}%",
+            help="% who felt they needed support but didn't receive it"
+        )
+        col3.metric(
+            "📊 Avg Symptom Score",
+            f"{avg_score:.1f} / 10",
+            help="Average ECS symptom burden across all users"
+        )
+        col4.metric(
+            "🔴 High Symptom Burden",
+            f"{high_burden_pct:.1f}%",
+            help="% with 3 or more ECS-linked symptoms"
+        )
+
+        # Score distribution chart
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            score_counts = agg_df['cecd_score'].value_counts().sort_index().reset_index()
+            score_counts.columns = ['Score', 'Count']
+            fig_live = px.bar(
+                score_counts, x='Score', y='Count',
+                title='Community Symptom Score Distribution',
+                color='Score',
+                color_continuous_scale='Greens'
+            )
+            fig_live.update_layout(
+                plot_bgcolor='white',
+                coloraxis_showscale=False,
+                xaxis_title='ECS Symptom Score',
+                yaxis_title='Number of Users'
+            )
+            st.plotly_chart(fig_live, use_container_width=True)
+
+        with col2:
+            tier_counts = agg_df['cecd_tier'].value_counts().reset_index()
+            tier_counts.columns = ['Tier', 'Count']
+            fig_tier = px.pie(
+                tier_counts, values='Count', names='Tier',
+                title='Community Symptom Tier Breakdown',
+                color_discrete_sequence=px.colors.sequential.Greens_r
+            )
+            fig_tier.update_traces(textposition='inside', textinfo='percent+label')
+            st.plotly_chart(fig_tier, use_container_width=True)
+
+        if most_common_freq:
+            st.info(f"💡 The most common use frequency among screened users is **{most_common_freq}**.")
+
+        st.caption("All data shown here is fully anonymized and aggregated. No individual user data is displayed.")
+
+    else:
+        # Show placeholder while data builds up
+        st.info("📊 Community insights will appear here as more people complete the screening. Be one of the first!")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("🧑‍🤝‍🧑 Total Screenings", "Building...")
+        col2.metric("⚠️ In the Care Gap", "Building...")
+        col3.metric("📊 Avg Symptom Score", "Building...")
+        col4.metric("🔴 High Symptom Burden", "Building...")
+
+else:
+    st.caption("📡 Live community insights require database configuration.")
+
 st.markdown("---")
 st.caption("""
 ⚠️ This tool is for educational and research purposes only. It is not a clinical diagnostic tool.  
