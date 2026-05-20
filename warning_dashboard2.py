@@ -607,7 +607,7 @@ if st.button("🔍 See My Profile", type="primary"):
             "of users with a similar profile report beneficial mental health outcomes."
         )
 
-  st.markdown("---")
+st.markdown("---")
 st.header("🌡️ CHS Digital Phenotype — Cannabinoid Hyperemesis Syndrome Screener")
 st.markdown("""
 **Cannabinoid Hyperemesis Syndrome (CHS)** is a condition of cyclic nausea, vomiting, 
@@ -965,9 +965,9 @@ st.caption("""
 ⚠️ This CHS screener is for educational purposes only and does not constitute medical advice.
 CHS diagnosis requires clinical assessment. If you are experiencing severe symptoms, seek medical care immediately.
 """)
-    st.markdown("---")
+st.markdown("---")
     
-    st.caption(
+ st.caption(
         "⚠️ This tool is for educational and research purposes only. "
         "It is not a clinical diagnostic tool. Results are based on population-level "
         "patterns from the 2024 Canadian Cannabis Survey and do not constitute "
