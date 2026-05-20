@@ -138,22 +138,8 @@ st.sidebar.metric("Filtered sample", f"{len(filtered):,}")
 st.sidebar.metric("Recalled warning", 
     f"{int((filtered['warn_recall_thcmh']==1).sum()):,}")
 
-supabase = get_supabase_client()
-user_id = user_login_cud()
+
  
-if 'chs_history' not in st.session_state or len(st.session_state.chs_history) == 0:
-    if supabase and user_id:
-        st.session_state.chs_history = load_chs_from_supabase(supabase, user_id)
-    else:
-        st.session_state.chs_history = []
- 
-st.sidebar.markdown("---")
-if user_id:
-    st.sidebar.markdown(f"**Logged in as:** `{user_id}`")
-    if st.sidebar.button("🔄 Switch User"):
-        del st.session_state["user_id"]
-        st.session_state.chs_history = []
-        st.rerun()
 
 # ── SECTION 1: Warning Label Paradox ─────────────────────────
 st.header("⚠️ The Warning Label Paradox")
@@ -608,6 +594,24 @@ if st.button("🔍 See My Profile", type="primary"):
         )
 
 st.markdown("---")
+
+supabase = get_supabase_client()
+user_id = user_login_cud()
+
+if 'chs_history' not in st.session_state or len(st.session_state.chs_history) == 0:
+    if supabase and user_id:
+        st.session_state.chs_history = load_chs_from_supabase(supabase, user_id)
+    else:
+        st.session_state.chs_history = []
+
+st.sidebar.markdown("---")
+if user_id:
+    st.sidebar.markdown(f"**Logged in as:** `{user_id}`")
+    if st.sidebar.button("🔄 Switch User"):
+        del st.session_state["user_id"]
+        st.session_state.chs_history = []
+        st.rerun()
+        
 st.header("🌡️ CHS Digital Phenotype — Cannabinoid Hyperemesis Syndrome Screener")
 st.markdown("""
 **Cannabinoid Hyperemesis Syndrome (CHS)** is a condition of cyclic nausea, vomiting, 
