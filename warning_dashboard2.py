@@ -455,7 +455,7 @@ with col1:
     use_frequency = st.selectbox(
         "How often do you use cannabis?",
         options=[1, 2, 3, 4, 5, 6, 7],
-        format_func=lambda x: {
+        format_func=lambda x: "Select an option" if x is None else {
             1: "Less than once a month",
             2: "Once a month",
             3: "2-3 times a month",
@@ -469,7 +469,7 @@ with col1:
     use_purpose = st.selectbox(
         "Why do you primarily use cannabis?",
         options=[1, 2, 3],
-        format_func=lambda x: {
+        format_func=lambda x: "Select an option" if x is None else {
             1: "Recreation only",
             2: "Both medical and recreational",
             3: "Medical only"
@@ -479,7 +479,7 @@ with col1:
     mental_impact = st.selectbox(
         "How has cannabis affected your mental health?",
         options=[1, 2, 3, 4, 5],
-        format_func=lambda x: {
+        format_func=lambda x: "Select an option" if x is None else {
             1: "Very beneficial",
             2: "Somewhat beneficial",
             3: "No effect",
@@ -492,7 +492,7 @@ with col2:
     recalled_warning = st.selectbox(
         "Have you seen this warning: 'Frequent cannabis use can contribute to mental health problems'?",
         options=[0, 1],
-        format_func=lambda x: {
+        format_func=lambda x: "Select an option" if x is None else {
             0: "No / Not sure",
             1: "Yes, I recall seeing it"
         }[x]
@@ -501,7 +501,7 @@ with col2:
     sought_help = st.selectbox(
         "Have you ever felt you needed professional help for your cannabis use?",
         options=[1, 2, 3],
-        format_func=lambda x: {
+        format_func=lambda x: "Select an option" if x is None else {
             1: "No, never",
             2: "Yes, in the past 12 months",
             3: "Yes, but not recently"
@@ -518,8 +518,11 @@ with col2:
 st.markdown("---")
 
 if st.button("🔍 See My Profile", type="primary"):
-    recalled = saw_warnings[saw_warnings['warn_recall_thcmh']==1.0]
-    notrecalled = saw_warnings[saw_warnings['warn_recall_thcmh']==0.0]
+    if any(v is None for v in [use_frequency, use_purpose, mental_impact, recalled_warning, sought_help]):
+        st.error("⚠️ Please answer all questions before viewing your profile.")
+    else:
+        recalled = saw_warnings[saw_warnings['warn_recall_thcmh']==1.0]
+        notrecalled = saw_warnings[saw_warnings['warn_recall_thcmh']==0.0]
 
     # Determine daily use
     is_daily = use_frequency == 7
